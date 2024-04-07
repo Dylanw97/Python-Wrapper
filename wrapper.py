@@ -49,20 +49,20 @@ class Wrapper:
         # additional variables for logger
         self.super_class_log_prefix = "WRAPPER - "
 
+        # logging
         logging.info(self.super_class_log_prefix + f"'Wrapper' class is initializing...")
 
         # variables used by methods in superclass
-        self.current_environment_reference_name = ""
+        self.current_environment_reference_name = "wrapper"
 
+        # logging
         logging.info(self.super_class_log_prefix + f"'Wrapper' class is done initializing.")
 
-    def get_configuration(self, configuration_name):
-
-        self.current_environment_reference_name = configuration_name
+    def get_configuration(self):
 
         configuration_string = ""
 
-        if self.current_environment_reference_name == "wrapper":
+        if self.current_environment_reference_name.lower() == "wrapper":
 
             configuration_string = \
                 f"""
@@ -107,9 +107,7 @@ class Wrapper:
 
         return configuration_string
 
-    def perform_environmental_checks(self, environment_identifier):
-
-        self.current_environment_reference_name = environment_identifier
+    def perform_environmental_checks(self):
 
         if self.current_environment_reference_name.lower() == "logger":
             pass
@@ -131,7 +129,41 @@ class Wrapper:
 
             except ImportError:
 
-                return False
+                pass
+
+            except Exception as e:
+
+                # logging
+                logging.error(self.super_class_log_prefix + "program was not able to import modules for EMAIL.")
+                logging.error(e)
+
+        elif self.current_environment_reference_name.lower() == "excel":
+
+            try:
+
+                import smtplib
+                from email.mime.multipart import MIMEMultipart
+                from email.mime.text import MIMEText
+                from email.mime.base import MIMEBase
+                from email import encoders
+
+                self.smtp = smtplib
+                self.MIMEMultipart = MIMEMultipart()
+                self.MIMEText = MIMEText
+                self.MIMEBase = MIMEBase
+                self.encoders = encoders
+
+            except ImportError:
+
+                pass
+
+            except Exception as e:
+
+                # logging
+                logging.error(self.super_class_log_prefix + "program was not able to import modules for EXCEL.")
+                logging.error(e)
+
+
 
     def check_dependencies(self):
 
@@ -259,6 +291,7 @@ class Logger(Wrapper):
         else:
 
             self.email_wrapper_configuration = self.toml.loads(self.get_logger_wrapper_configuration())
+
 
 class Email(Wrapper):
 
@@ -400,8 +433,10 @@ class Email(Wrapper):
 
     def send_email(self):
 
+        self.current_environment_reference_name = "email"
+
         # perform environmental checks to make sure methods can operate properly
-        self.perform_environmental_checks("email")
+        self.perform_environmental_checks()
 
         # create object for email message
         self.email_message = self.MIMEMultipart
