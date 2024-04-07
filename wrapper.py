@@ -1,6 +1,9 @@
+import logging
+
+
 class Wrapper:
 
-    def __init__(self, external_configuration=True):
+    def __init__(self):
 
         # global standard libraries imports
         import os
@@ -32,48 +35,75 @@ class Wrapper:
         self.log_file_path = os.path.join(self.current_working_directory, self.log_filename)
 
         # retrieve configuration for the wrapper super class
-        if external_configuration:
-
-            try:
-
-                with open(self.configuration_file_path, mode="rb") as fp:
-                    self.wrapper_super_configuration = self.toml.load(fp)
-
-            except FileNotFoundError as e:
-
-                # prints to the console since there is no logger object setup yet
-                print(e)
-
-        else:
-
-            self.wrapper_super_configuration = self.toml.loads(self.get_wrapper_super_configuration())
+        self.wrapper_super_configuration = self.toml.loads(self.get_configuration("wrapper"))
 
         # create log for the wrapper super class
         logging.basicConfig(
             filename=self.wrapper_super_configuration["logging"]["file"],
-            format=self.wrapper_super_configuration["logging"]["format"],
-            datefmt=self.wrapper_super_configuration["logging"]["dateformat"],
+            format=self.wrapper_super_configuration["logging"]["entry_format"],
+            datefmt=self.wrapper_super_configuration["logging"]["date_format"],
             encoding=self.wrapper_super_configuration["logging"]["encoding"],
             level=logging.DEBUG
         )
 
-        # these variables hold and handle arguments passed to the class
-        self.external_configuration_status = external_configuration
+        # additional variables for logger
+        self.super_class_log_prefix = "WRAPPER - "
 
-        # subclass configuration locations
-        self.export_configuration_file_location = ""
-        self.export_configuration_text = ""
+        logging.info(self.super_class_log_prefix + f"'Wrapper' class is initializing...")
 
-        # variables used by methods ins superclass
+        # variables used by methods in superclass
         self.current_environment_reference_name = ""
 
-    @staticmethod
-    def get_wrapper_super_configuration():
+        logging.info(self.super_class_log_prefix + f"'Wrapper' class is done initializing.")
 
-        configuration_string = \
-            f"""
-            test = ""
-            """
+    def get_configuration(self, configuration_name):
+
+        self.current_environment_reference_name = configuration_name
+
+        configuration_string = ""
+
+        if self.current_environment_reference_name == "wrapper":
+
+            configuration_string = \
+                f"""
+                [logging]
+                file="log.log"
+                entry_format="%(asctime)s - %(levelname)s - %(message)s"
+                date_format="%Y-%m-%d %H:%M:%S"
+                encoding="utf-8"
+                """
+
+        elif self.current_environment_reference_name == "logger":
+
+            configuration_string = \
+                f"""
+                [logging]
+                file="log.log"
+                entry_format="%(asctime)s - %(levelname)s - %(message)s"
+                date_format="%Y-%m-%d %H:%M:%S"
+                encoding="utf-8"
+                """
+
+        elif self.current_environment_reference_name == "email":
+
+            configuration_string = \
+                f"""
+                [email]
+                smtp_server = ""
+                smtp_port = 25
+                secure_smtp_port_1 = 587    
+                secure_smtp_port_2 = 465
+                smtp_username = ""
+                smtp_password = ""
+
+                sender = ""
+                recipients = [""]
+                subject = ""
+                body = ""
+
+                attachment_path = ""
+                attachment_name = ""
+                """
 
         return configuration_string
 
@@ -198,6 +228,9 @@ class Wrapper:
 
             file.write(self.export_configuration_text)
 
+    def test(self):
+
+        logging.info(self.super_class_log_prefix + "Log Test")
 
 class Logger(Wrapper):
 
@@ -226,21 +259,6 @@ class Logger(Wrapper):
         else:
 
             self.email_wrapper_configuration = self.toml.loads(self.get_logger_wrapper_configuration())
-
-    @staticmethod
-    def get_logger_wrapper_configuration():
-
-        configuration_string = \
-            f"""
-            [logging]
-            file="log.log"
-            format="%(asctime)s - %(levelname)s - %(message)s"
-            dateformat="%Y-%m-%d %H:%M:%S"
-            encoding="utf-8"
-            """
-
-        return configuration_string
-
 
 class Email(Wrapper):
 

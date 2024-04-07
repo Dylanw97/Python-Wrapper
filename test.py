@@ -2,8 +2,6 @@ from wrapper import *
 
 if __name__ == "__main__":
 
-    test_list = [1, 2, 3, 4, 5]
+    w = Wrapper()
 
-    e = Excel()
-
-    m.send_email()
+    w.test()
