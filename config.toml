@@ -1,0 +1,17 @@
+[test]
+1 = ""
+2 = ""
+
+[email]
+smtp_server = "mobile.lincofood.com"
+smtp_port = 25
+secure_smtp_port_1 = 587 
+secure_smtp_port_2 = 465
+smtp_username = ""
+smtp_password = ""
+sender = "qad-etfr@baader.com"
+recipients = ["dylan.wisdom@baader.com"]
+subject = "Test Email"
+body = "Test Email"
+attachment_path = ""
+attachment_name = ""
