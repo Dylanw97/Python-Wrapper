@@ -1,6 +1,4 @@
-[test]
-1 = ""
-2 = ""
+
 
 [email]
 smtp_server = "mobile.lincofood.com"

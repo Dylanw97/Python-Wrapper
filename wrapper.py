@@ -1,17 +1,19 @@
 class Wrapper:
 
-    def __init__(self):
+    def __init__(self, external_configuration=True):
 
         # global standard libraries imports
         import os
         import re
         import tomllib
+        import logging
         import subprocess
 
-        # global object declarations
+        # global imported object declarations
         self.os = os
         self.re = re
         self.toml = tomllib
+        self.logger = logging
         self.subprocess = subprocess
         self.openpyxl = None
         self.smtp = None
@@ -29,23 +31,77 @@ class Wrapper:
         self.log_filename = "log.log"
         self.log_file_path = os.path.join(self.current_working_directory, self.log_filename)
 
-        self.current_environment_reference_name = ""
+        # retrieve configuration for the wrapper super class
+        if external_configuration:
 
-        # superclass configuration
-        self.super_class_configuration = ""
+            try:
+
+                with open(self.configuration_file_path, mode="rb") as fp:
+                    self.wrapper_super_configuration = self.toml.load(fp)
+
+            except FileNotFoundError as e:
+
+                # prints to the console since there is no logger object setup yet
+                print(e)
+
+        else:
+
+            self.wrapper_super_configuration = self.toml.loads(self.get_wrapper_super_configuration())
+
+        # create log for the wrapper super class
+        logging.basicConfig(
+            filename=self.wrapper_super_configuration["logging"]["file"],
+            format=self.wrapper_super_configuration["logging"]["format"],
+            datefmt=self.wrapper_super_configuration["logging"]["dateformat"],
+            encoding=self.wrapper_super_configuration["logging"]["encoding"],
+            level=logging.DEBUG
+        )
+
+        # these variables hold and handle arguments passed to the class
+        self.external_configuration_status = external_configuration
 
         # subclass configuration locations
         self.export_configuration_file_location = ""
         self.export_configuration_text = ""
 
-    def get_wrapper_super_configuration(self):
+        # variables used by methods ins superclass
+        self.current_environment_reference_name = ""
+
+    @staticmethod
+    def get_wrapper_super_configuration():
 
         configuration_string = \
             f"""
             test = ""
             """
 
-        self.super_class_configuration = configuration_string
+        return configuration_string
+
+    def perform_environmental_checks(self, environment_identifier):
+
+        self.current_environment_reference_name = environment_identifier
+
+        if self.current_environment_reference_name.lower() == "logger":
+            pass
+        elif self.current_environment_reference_name.lower() == "email":
+
+            try:
+
+                import smtplib
+                from email.mime.multipart import MIMEMultipart
+                from email.mime.text import MIMEText
+                from email.mime.base import MIMEBase
+                from email import encoders
+
+                self.smtp = smtplib
+                self.MIMEMultipart = MIMEMultipart()
+                self.MIMEText = MIMEText
+                self.MIMEBase = MIMEBase
+                self.encoders = encoders
+
+            except ImportError:
+
+                return False
 
     def check_dependencies(self):
 
@@ -73,8 +129,8 @@ class Wrapper:
 
             try:
 
-                import openpyxl
-                self.openpyxl = openpyxl
+                from openpyxl import Workbook
+                self.openpyxl = Workbook
 
             except ImportError:
 
@@ -143,6 +199,49 @@ class Wrapper:
             file.write(self.export_configuration_text)
 
 
+class Logger(Wrapper):
+
+    def __init__(self, external_configuration=True):
+
+        # docstring
+        """
+
+        """
+
+        # retrieve super configuration
+        super().__init__()
+
+        # retrieve configuration for the logger wrapper class
+        if external_configuration:
+
+            try:
+
+                with open(self.configuration_file_path, mode="rb") as fp:
+                    self.logger_wrapper_configuration = self.toml.load(fp)
+
+            except FileNotFoundError as e:
+
+                print(e)
+
+        else:
+
+            self.email_wrapper_configuration = self.toml.loads(self.get_logger_wrapper_configuration())
+
+    @staticmethod
+    def get_logger_wrapper_configuration():
+
+        configuration_string = \
+            f"""
+            [logging]
+            file="log.log"
+            format="%(asctime)s - %(levelname)s - %(message)s"
+            dateformat="%Y-%m-%d %H:%M:%S"
+            encoding="utf-8"
+            """
+
+        return configuration_string
+
+
 class Email(Wrapper):
 
     def __init__(self, external_configuration=True, secure=True, attachment=False):
@@ -157,9 +256,7 @@ class Email(Wrapper):
         # retrieve super configuration
         super().__init__()
 
-        self.email_wrapper_dependencies = []
-
-        # retrieve configuration
+        # retrieve configuration for the email wrapper class
         if external_configuration:
 
             try:
@@ -175,7 +272,10 @@ class Email(Wrapper):
 
             self.email_wrapper_configuration = self.toml.loads(self.get_email_wrapper_configuration())
 
-        # set email criteria
+        # variable to hold dependencies for these classes methods
+        self.email_wrapper_dependencies = []
+
+        # these variables hold and handle arguments passed to the class
         self.external_configuration_status = external_configuration
         self.secure_status = secure
         self.email_attachment_status = attachment
@@ -187,17 +287,20 @@ class Email(Wrapper):
         self.smtp_server = self.email_wrapper_configuration["email"]["smtp_server"]
         self.smtp_port = self.email_wrapper_configuration["email"]["smtp_port"]
 
+        # this sets additional variables if the email should be sent securely
         if self.secure_status:
             self.secure_smtp_port_1 = self.email_wrapper_configuration["email"]["secure_smtp_port_1"]
             self.secure_smtp_port_2 = self.email_wrapper_configuration["email"]["secure_smtp_port_2"]
             self.smtp_username = self.email_wrapper_configuration["email"]["smtp_username"]
             self.smtp_password = self.email_wrapper_configuration["email"]["smtp_password"]
 
+        # these values are used for build headers of an email
         self.email_sender = self.email_wrapper_configuration["email"]["sender"]
         self.email_recipients = self.email_wrapper_configuration["email"]["recipients"]
         self.email_subject = self.email_wrapper_configuration["email"]["subject"]
         self.email_body = self.email_wrapper_configuration["email"]["body"]
 
+        # these variables hold values used to send / manage email attachments
         self.email_attachment_path = self.email_wrapper_configuration["email"]["attachment_path"]
         self.email_attachment_name = self.email_wrapper_configuration["email"]["attachment_name"]
 
@@ -207,30 +310,23 @@ class Email(Wrapper):
         configuration_string = \
             f"""
             [email]
-            smtp_server = "mobile.lincofood.com"
+            smtp_server = ""
             smtp_port = 25
             secure_smtp_port_1 = 587    
             secure_smtp_port_2 = 465
             smtp_username = ""
             smtp_password = ""
             
-            sender = "qad-etfr@baader.com"
-            recipients = ["dylan.wisdom@baader.com"]
-            subject = "Test Email"
-            body = "Test Email"
+            sender = ""
+            recipients = [""]
+            subject = ""
+            body = ""
             
             attachment_path = ""
             attachment_name = ""
             """
 
         return configuration_string
-
-    def check_email_environment(self):
-
-        self.current_environment_reference_name = "email"
-
-        if not self.check_dependencies():
-            self.install_dependencies(self.email_wrapper_dependencies)
 
     def build_email_headers(self):
 
@@ -286,7 +382,8 @@ class Email(Wrapper):
 
     def send_email(self):
 
-        self.check_email_environment()
+        # perform environmental checks to make sure methods can operate properly
+        self.perform_environmental_checks("email")
 
         # create object for email message
         self.email_message = self.MIMEMultipart
@@ -353,37 +450,13 @@ class Excel(Wrapper):
 
     def create_excel_workbook(self):
 
-        self.excel_workbook = self.Workbook()
+        self.excel_workbook = self.openpyxl()
 
-    def select_active_excel_workbook(self):
-
-        self.
-
-    def iterate_data_for_excel(self):
-
-        # Write data from the list of lists to the worksheet
-        for row_index, row_data in enumerate(data_to_excel, start=1):
-            for col_index, value in enumerate(row_data, start=1):
-                ws.cell(row=row_index, column=col_index, value=value)
-
-    def create_excel_file(self, data_to_excel):
+    def create_file(self, data_to_excel):
 
         self.check_excel_environment()
 
-        # Create a new workbook
-        wb = Workbook()
-
-        # Select the active worksheet
-        ws = wb.active
-
-        # Write data from the list of lists to the worksheet
-        for row_index, row_data in enumerate(data_to_excel, start=1):
-            for col_index, value in enumerate(row_data, start=1):
-                ws.cell(row=row_index, column=col_index, value=value)
-
-        # Save the workbook
-        wb.save(cfg["excel"]["file"])
-
+        self.create_excel_workbook()
 
 
 class Data(Wrapper):
